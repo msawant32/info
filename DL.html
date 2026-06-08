@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fake DL ID Generator — Dev Test Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bwip-js/3.3.0/bwip-js-min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: .8rem;
+    color: #64748b;
+    margin-bottom: 28px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 28px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── FORM ── */
+  .form-card {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 24px;
+    border: 1px solid #334155;
+  }
+  .form-card h2 { font-size: .9rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .full { grid-column: 1 / -1; }
+
+  label { display: block; font-size: .75rem; color: #94a3b8; margin-bottom: 4px; }
+  input, select {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #f1f5f9;
+    padding: 8px 10px;
+    font-size: .85rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus, select:focus { border-color: #3b82f6; }
+  select option { background: #1e293b; }
+
+  .divider { border: none; border-top: 1px solid #334155; margin: 16px 0; }
+
+  .btn-generate {
+    width: 100%;
+    margin-top: 6px;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .2s, transform .1s;
+  }
+  .btn-generate:hover { opacity: .92; transform: translateY(-1px); }
+  .btn-generate:active { transform: translateY(0); }
+
+  /* ── PREVIEW ── */
+  .preview-col { display: flex; flex-direction: column; gap: 24px; }
+
+  .card-label {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: #64748b;
+    margin-bottom: 10px;
+  }
+
+  /* DL card base — credit-card aspect ratio 85.6×53.98mm → 3.375 × 2.125 in */
+  .dl-card {
+    width: 440px;
+    height: 277px;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    flex-shrink: 0;
+  }
+
+  /* ══════ FRONT ══════ */
+  .front {
+    background: linear-gradient(160deg, #1a3a6b 0%, #0d2450 60%, #0a1a3a 100%);
+    font-family: 'Courier New', monospace;
+    color: #fff;
+  }
+
+  .front .top-bar {
+    background: linear-gradient(90deg, #c8a415, #e6c832, #c8a415);
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+  }
+  .front .top-bar .state-name {
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 900;
+    font-size: 1.05rem;
+    color: #0d2450;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+  }
+  .front .top-bar .dl-title {
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: .7rem;
+    color: #0d2450;
+    letter-spacing: .1em;
+  }
+
+  .front .body { display: flex; gap: 10px; padding: 10px 12px; height: calc(100% - 38px); }
+
+  .front .photo {
+    width: 72px;
+    height: 90px;
+    background: #2a4a80;
+    border: 2px solid #c8a415;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .front .photo svg { opacity: .6; }
+
+  .front .fields { flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: .62rem; }
+
+  .front .field-name {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ffd700;
+    letter-spacing: .03em;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .front .field-row { display: flex; gap: 12px; }
+  .front .field { }
+  .front .field .lbl { color: #93c5fd; font-size: .52rem; text-transform: uppercase; letter-spacing: .08em; }
+  .front .field .val { color: #f1f5f9; font-size: .68rem; font-weight: 600; }
+
+  .front .dl-number {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    font-size: .6rem;
+    color: #93c5fd;
+    letter-spacing: .05em;
+  }
+  .front .dl-number span { color: #ffd700; font-weight: 700; font-size: .72rem; }
+
+  .front .star { position: absolute; bottom: 10px; left: 12px; }
+
+  .ghost-state {
+    position: absolute;
+    right: -10px;
+    bottom: -14px;
+    font-size: 5rem;
+    font-weight: 900;
+    color: rgba(255,255,255,.05);
+    letter-spacing: -.05em;
+    pointer-events: none;
+    text-transform: uppercase;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  /* ══════ BACK ══════ */
+  .back {
+    background: linear-gradient(160deg, #f5f0e0 0%, #ede8d5 100%);
+    color: #111;
+  }
+
+  .back .mag-stripe {
+    background: #222;
+    height: 34px;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .back .back-body {
+    display: flex;
+    gap: 12px;
+    padding: 10px 12px 8px;
+    align-items: flex-start;
+  }
+
+  .back .barcode-area {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  #barcodeCanvas {
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    background: #fff;
+  }
+
+  .back .barcode-lbl {
+    font-size: .45rem;
+    color: #666;
+    text-align: center;
+    font-family: monospace;
+  }
+
+  .back .back-fields {
+    flex: 1;
+    font-size: .58rem;
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .back .back-fields .bf-row { display: flex; flex-direction: column; }
+  .back .back-fields .bf-lbl { font-size: .48rem; color: #666; text-transform: uppercase; letter-spacing: .06em; }
+  .back .back-fields .bf-val { font-weight: 700; font-size: .62rem; }
+
+  .back .sig-area {
+    padding: 0 12px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .back .sig-line {
+    border-bottom: 1px solid #888;
+    height: 22px;
+    width: 200px;
+    background: #fff;
+    border-radius: 2px 2px 0 0;
+  }
+  .back .sig-lbl { font-size: .48rem; color: #666; }
+
+  .back .footer-text {
+    padding: 4px 12px;
+    font-size: .42rem;
+    color: #555;
+    line-height: 1.4;
+    border-top: 1px solid #ccc;
+    margin: 0 12px;
+  }
+
+  /* ── DOWNLOAD BTN ── */
+  .btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: #16a34a;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .btn-download:hover { opacity: .88; }
+
+  .notice {
+    text-align: center;
+    font-size: .7rem;
+    color: #475569;
+    margin-top: 32px;
+    padding: 12px;
+    border: 1px dashed #334155;
+    border-radius: 8px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    .dl-card { width: 100%; height: auto; aspect-ratio: 85.6 / 53.98; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🪪 Fake Driver's License Generator</h1>
+<p class="subtitle">Developer test tool — generates AAMVA-compliant PDF417 barcodes &nbsp;|&nbsp; NOT a real ID</p>
+
+<div class="layout">
+
+  <!-- ── FORM ── -->
+  <div class="form-card">
+    <h2>Enter ID Details</h2>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+
+      <div class="row">
+        <div>
+          <label>First Name</label>
+          <input id="firstName" value="John" placeholder="John">
+        </div>
+        <div>
+          <label>Last Name</label>
+          <input id="lastName" value="Anderson" placeholder="Smith">
+        </div>
+      </div>
+      <div>
+        <label>Middle Name</label>
+        <input id="middleName" value="Michael" placeholder="(optional)">
+      </div>
+
+      <hr class="divider">
+
+      <div class="row">
+        <div>
+          <label>Date of Birth</label>
+          <input id="dob" type="date" value="1990-06-15">
+        </div>
+        <div>
+          <label>Sex</label>
+          <select id="sex">
+            <option value="1">Male</option>
+            <option value="2">Female</option>
+            <option value="9">Not Specified</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Height (inches)</label>
+          <input id="height" type="number" value="70" min="48" max="84">
+        </div>
+        <div>
+          <label>Weight (lbs)</label>
+          <input id="weight" type="number" value="175" min="80" max="400">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Eye Color</label>
+          <select id="eyeColor">
+            <option value="BRO">Brown</option>
+            <option value="BLU">Blue</option>
+            <option value="GRN">Green</option>
+            <option value="HAZ">Hazel</option>
+            <option value="GRY">Grey</option>
+            <option value="BLK">Black</option>
+          </select>
+        </div>
+        <div>
+          <label>Hair Color</label>
+          <select id="hairColor">
+            <option value="BRO">Brown</option>
+            <option value="BLK">Black</option>
+            <option value="BLN">Blonde</option>
+            <option value="RED">Red</option>
+            <option value="GRY">Grey</option>
+            <option value="WHI">White</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div>
+        <label>Street Address</label>
+        <input id="street" value="4521 Maple Avenue" placeholder="123 Main St">
+      </div>
+      <div class="row">
+        <div>
+          <label>City</label>
+          <input id="city" value="Springfield" placeholder="Springfield">
+        </div>
+        <div>
+          <label>ZIP</label>
+          <input id="zip" value="62701" maxlength="9" placeholder="62701">
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="row">
+        <div>
+          <label>State</label>
+          <select id="state">
+            <option value="AL|636033">Alabama</option>
+            <option value="AK|636059">Alaska</option>
+            <option value="AZ|636026">Arizona</option>
+            <option value="AR|636021">Arkansas</option>
+            <option value="CA|636014">California</option>
+            <option value="CO|636020">Colorado</option>
+            <option value="CT|636006">Connecticut</option>
+            <option value="DE|636011">Delaware</option>
+            <option value="FL|636010">Florida</option>
+            <option value="GA|636055">Georgia</option>
+            <option value="HI|636047">Hawaii</option>
+            <option value="ID|636050">Idaho</option>
+            <option value="IL|636035" selected>Illinois</option>
+            <option value="IN|636037">Indiana</option>
+            <option value="IA|636018">Iowa</option>
+            <option value="KS|636022">Kansas</option>
+            <option value="KY|636046">Kentucky</option>
+            <option value="LA|636007">Louisiana</option>
+            <option value="ME|636041">Maine</option>
+            <option value="MD|636003">Maryland</option>
+            <option value="MA|636002">Massachusetts</option>
+            <option value="MI|636032">Michigan</option>
+            <option value="MN|636038">Minnesota</option>
+            <option value="MS|636051">Mississippi</option>
+            <option value="MO|636030">Missouri</option>
+            <option value="MT|636008">Montana</option>
+            <option value="NE|636054">Nebraska</option>
+            <option value="NV|636049">Nevada</option>
+            <option value="NH|636039">New Hampshire</option>
+            <option value="NJ|636036">New Jersey</option>
+            <option value="NM|636009">New Mexico</option>
+            <option value="NY|636001">New York</option>
+            <option value="NC|636004">North Carolina</option>
+            <option value="ND|636034">North Dakota</option>
+            <option value="OH|636023">Ohio</option>
+            <option value="OK|636058">Oklahoma</option>
+            <option value="OR|636029">Oregon</option>
+            <option value="PA|636025">Pennsylvania</option>
+            <option value="RI|636052">Rhode Island</option>
+            <option value="SC|636005">South Carolina</option>
+            <option value="SD|636019">South Dakota</option>
+            <option value="TN|636053">Tennessee</option>
+            <option value="TX|636015">Texas</option>
+            <option value="UT|636040">Utah</option>
+            <option value="VT|636016">Vermont</option>
+            <option value="VA|636000">Virginia</option>
+            <option value="WA|636045">Washington</option>
+            <option value="WV|636061">West Virginia</option>
+            <option value="WI|636031">Wisconsin</option>
+            <option value="WY|636060">Wyoming</option>
+          </select>
+        </div>
+        <div>
+          <label>Vehicle Class</label>
+          <select id="vehicleClass">
+            <option value="D" selected>D – Standard</option>
+            <option value="A">A – Commercial</option>
+            <option value="B">B – Commercial</option>
+            <option value="C">C – Commercial</option>
+            <option value="M">M – Motorcycle</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>License Number</label>
+          <input id="licenseNum" value="D123456789" placeholder="D123456789">
+        </div>
+        <div>
+          <label>Expiry Date</label>
+          <input id="expiry" type="date" value="2029-06-15">
+        </div>
+      </div>
+
+      <button class="btn-generate" onclick="generate()">⚡ Generate ID</button>
+    </div>
+  </div>
+
+  <!-- ── PREVIEW ── -->
+  <div class="preview-col">
+
+    <!-- FRONT -->
+    <div>
+      <div class="card-label">▲ Front of ID</div>
+      <div class="dl-card front" id="cardFront">
+        <div class="top-bar">
+          <span class="state-name" id="f_state">Illinois</span>
+          <span class="dl-title">DRIVER LICENSE</span>
+        </div>
+        <div class="body">
+          <div class="photo">
+            <svg width="48" height="60" viewBox="0 0 48 60" fill="none">
+              <circle cx="24" cy="20" r="13" fill="#5b8dd9"/>
+              <ellipse cx="24" cy="52" rx="20" ry="14" fill="#5b8dd9"/>
+            </svg>
+          </div>
+          <div class="fields">
+            <div class="field-name" id="f_name">ANDERSON, JOHN MICHAEL</div>
+            <div class="field-row">
+              <div class="field"><div class="lbl">DOB</div><div class="val" id="f_dob">06/15/1990</div></div>
+              <div class="field"><div class="lbl">Sex</div><div class="val" id="f_sex">M</div></div>
+              <div class="field"><div class="lbl">Exp</div><div class="val" id="f_exp">06/15/2029</div></div>
+            </div>
+            <div class="field"><div class="lbl">Address</div><div class="val" id="f_addr">4521 MAPLE AVENUE</div></div>
+            <div class="field"><div class="lbl">City / ZIP</div><div class="val" id="f_citzip">SPRINGFIELD, IL 62701</div></div>
+            <div class="field-row" style="margin-top:4px;">
+              <div class="field"><div class="lbl">Ht</div><div class="val" id="f_ht">5'10"</div></div>
+              <div class="field"><div class="lbl">Wt</div><div class="val" id="f_wt">175</div></div>
+              <div class="field"><div class="lbl">Eyes</div><div class="val" id="f_eyes">BRO</div></div>
+              <div class="field"><div class="lbl">Hair</div><div class="val" id="f_hair">BRO</div></div>
+              <div class="field"><div class="lbl">Class</div><div class="val" id="f_cls">D</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dl-number">DL# <span id="f_dlnum">D123456789</span></div>
+        <div class="star">
+          <svg width="22" height="22" viewBox="0 0 22 22">
+            <polygon points="11,1 13.9,7.6 21,8.2 15.8,13 17.6,20 11,16.3 4.4,20 6.2,13 1,8.2 8.1,7.6" fill="#ffd700" stroke="#c8a415" stroke-width=".5"/>
+            <text x="11" y="15" text-anchor="middle" font-size="6" fill="#0d2450" font-weight="bold">STAR</text>
+          </svg>
+        </div>
+        <div class="ghost-state" id="f_ghost">IL</div>
+      </div>
+    </div>
+
+    <!-- BACK -->
+    <div>
+      <div class="card-label">▼ Back of ID (with PDF417 barcode)</div>
+      <div class="dl-card back" id="cardBack">
+        <div class="mag-stripe"></div>
+        <div class="back-body">
+          <div class="barcode-area">
+            <canvas id="barcodeCanvas" width="155" height="110"></canvas>
+            <div class="barcode-lbl">PDF417 — AAMVA</div>
+          </div>
+          <div class="back-fields">
+            <div class="bf-row"><div class="bf-lbl">Document Discriminator</div><div class="bf-val" id="b_dd" style="font-size:.5rem;word-break:break-all;">—</div></div>
+            <div class="bf-row"><div class="bf-lbl">Issue Date</div><div class="bf-val" id="b_iss">—</div></div>
+            <div class="bf-row"><div class="bf-lbl">Restrictions</div><div class="bf-val">NONE</div></div>
+            <div class="bf-row"><div class="bf-lbl">Endorsements</div><div class="bf-val">NONE</div></div>
+            <div class="bf-row"><div class="bf-lbl">Country</div><div class="bf-val">USA</div></div>
+          </div>
+        </div>
+        <div class="sig-area">
+          <div class="sig-line"></div>
+          <div class="sig-lbl">AUTHORIZED SIGNATURE — NOT VALID UNLESS SIGNED</div>
+        </div>
+        <div class="footer-text" id="b_footer">
+          THIS LICENSE GRANTS THE PRIVILEGE TO OPERATE MOTOR VEHICLES IN ILLINOIS · CLASS D · FOR TEST PURPOSES ONLY
+        </div>
+      </div>
+      <button class="btn-download" onclick="downloadBoth()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        ⬇ Download Front &amp; Back (PNG)
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="notice">
+  ⚠️ <strong>For software development and testing only.</strong>
+  All data is synthetic. Do not use for any fraudulent purpose.
+  Barcodes contain AAMVA-format data matching the fields you entered.
+</div>
+
+<!-- html2canvas for download -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+  // ── AAMVA string builder ──────────────────────────────────────────
+  function fmtDate(dateStr) {
+    // dateStr: YYYY-MM-DD → MMDDYYYY
+    if (!dateStr) return '01011990';
+    const [y, m, d] = dateStr.split('-');
+    return `${m}${d}${y}`;
+  }
+
+  function buildAAMVA(f) {
+    const [stateCode, iin] = f.state.split('|');
+    const fields = [
+      ['DAQ', f.licenseNum],
+      ['DCS', f.lastName.toUpperCase()],
+      ['DAC', f.firstName.toUpperCase()],
+      ['DAD', (f.middleName || '').toUpperCase()],
+      ['DCA', f.vehicleClass],
+      ['DCB', 'NONE'],
+      ['DCD', 'NONE'],
+      ['DBD', fmtDate(f.issueDate)],
+      ['DBB', fmtDate(f.dob)],
+      ['DBA', fmtDate(f.expiry)],
+      ['DBC', f.sex],
+      ['DAU', String(f.height).padStart(3,'0') + ' IN'],
+      ['DAW', String(f.weight)],
+      ['DAY', f.eyeColor],
+      ['DAZ', f.hairColor],
+      ['DAG', f.street.toUpperCase()],
+      ['DAI', f.city.toUpperCase()],
+      ['DAJ', stateCode],
+      ['DAK', f.zip.padEnd(11,' ')],
+      ['DCF', f.licenseNum + stateCode + fmtDate(f.dob)],
+      ['DCG', 'USA'],
+      ['DDA', 'N'],
+      ['DDD', '0'],
+    ];
+    const dataBlock = 'DL\r' + fields.map(([k,v]) => `${k}${v}\r`).join('');
+    const header = `@\n\x1e\rANSI ${iin}08000 1`;
+    const subOff = String(header.length + 4).padStart(4,'0');
+    const subLen = String(dataBlock.length + 4).padStart(4,'0');
+    return header + `DL${subOff}${subLen}` + dataBlock;
+  }
+
+  // ── Render PDF417 barcode ─────────────────────────────────────────
+  function renderBarcode(aamvaStr) {
+    const canvas = document.getElementById('barcodeCanvas');
+    try {
+      bwipjs.toCanvas(canvas, {
+        bcid:        'pdf417',
+        text:        aamvaStr,
+        scale:       1,
+        height:      12,
+        columns:     8,
+        eclevel:     2,
+        includetext: false,
+        padding:     4,
+      });
+    } catch(e) {
+      console.error('Barcode error:', e);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fee';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#900';
+      ctx.font = '10px sans-serif';
+      ctx.fillText('Barcode error', 8, 30);
+    }
+  }
+
+  // ── Height helper ─────────────────────────────────────────────────
+  function inchesToDisplay(inches) {
+    const ft = Math.floor(inches / 12);
+    const ins = inches % 12;
+    return `${ft}'${ins}"`;
+  }
+
+  // ── Main generate ─────────────────────────────────────────────────
+  function generate() {
+    const stateVal   = document.getElementById('state').value;
+    const [stateCode] = stateVal.split('|');
+    const stateName  = document.getElementById('state').options[document.getElementById('state').selectedIndex].text;
+
+    const f = {
+      firstName:   document.getElementById('firstName').value.trim() || 'JOHN',
+      middleName:  document.getElementById('middleName').value.trim(),
+      lastName:    document.getElementById('lastName').value.trim() || 'DOE',
+      dob:         document.getElementById('dob').value,
+      expiry:      document.getElementById('expiry').value,
+      sex:         document.getElementById('sex').value,
+      height:      parseInt(document.getElementById('height').value) || 70,
+      weight:      parseInt(document.getElementById('weight').value) || 170,
+      eyeColor:    document.getElementById('eyeColor').value,
+      hairColor:   document.getElementById('hairColor').value,
+      street:      document.getElementById('street').value.trim(),
+      city:        document.getElementById('city').value.trim(),
+      zip:         document.getElementById('zip').value.trim(),
+      state:       stateVal,
+      vehicleClass:document.getElementById('vehicleClass').value,
+      licenseNum:  document.getElementById('licenseNum').value.trim(),
+      issueDate:   new Date().toISOString().split('T')[0],
+    };
+
+    // ── Front fields ──
+    document.getElementById('f_state').textContent = stateName.toUpperCase();
+    document.getElementById('f_ghost').textContent = stateCode;
+
+    const nameStr = [f.lastName.toUpperCase(), f.firstName.toUpperCase() + (f.middleName ? ' ' + f.middleName.toUpperCase()[0] + '.' : '')].join(', ');
+    document.getElementById('f_name').textContent = nameStr;
+
+    const dob = new Date(f.dob + 'T00:00:00');
+    document.getElementById('f_dob').textContent = dob.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
+    document.getElementById('f_sex').textContent = f.sex === '1' ? 'M' : f.sex === '2' ? 'F' : 'X';
+
+    const exp = new Date(f.expiry + 'T00:00:00');
+    document.getElementById('f_exp').textContent = exp.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
+
+    document.getElementById('f_addr').textContent = f.street.toUpperCase();
+    document.getElementById('f_citzip').textContent = `${f.city.toUpperCase()}, ${stateCode} ${f.zip}`;
+    document.getElementById('f_ht').textContent = inchesToDisplay(f.height);
+    document.getElementById('f_wt').textContent = f.weight + ' lb';
+    document.getElementById('f_eyes').textContent = f.eyeColor;
+    document.getElementById('f_hair').textContent = f.hairColor;
+    document.getElementById('f_cls').textContent = f.vehicleClass;
+    document.getElementById('f_dlnum').textContent = f.licenseNum;
+
+    // ── Back fields ──
+    const dd = f.licenseNum + stateCode + fmtDate(f.dob);
+    document.getElementById('b_dd').textContent = dd;
+    document.getElementById('b_iss').textContent = new Date(f.issueDate + 'T00:00:00').toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
+    document.getElementById('b_footer').textContent =
+      `THIS LICENSE GRANTS THE PRIVILEGE TO OPERATE MOTOR VEHICLES IN ${stateName.toUpperCase()} · CLASS ${f.vehicleClass} · FOR TEST PURPOSES ONLY`;
+
+    // ── Barcode ──
+    const aamvaStr = buildAAMVA(f);
+    renderBarcode(aamvaStr);
+  }
+
+  // ── Download helpers ──────────────────────────────────────────────
+  function downloadCard(elementId, filename) {
+    const card = document.getElementById(elementId);
+    html2canvas(card, { scale: 3, useCORS: true, backgroundColor: null }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+  }
+  function downloadFront() { downloadCard('cardFront', 'dl_front_' + Date.now() + '.png'); }
+  function downloadBack()  { downloadCard('cardBack',  'dl_back_'  + Date.now() + '.png'); }
+  function downloadBoth() {
+    const ts = Date.now();
+    downloadCard('cardFront', 'dl_front_' + ts + '.png');
+    setTimeout(() => downloadCard('cardBack', 'dl_back_' + ts + '.png'), 400);
+  }
+
+  // Generate on load with defaults
+  window.onload = () => generate();
+</script>
+</body>
+</html>
